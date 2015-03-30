@@ -38,7 +38,7 @@
 
 ## Как собрать самому?
 
-Поставить (Go)[https://golang.org/doc/install] и сказать:
+Поставить [Go](https://golang.org/doc/install) и сказать:
 
 `go get github.com/davidmz/frf-saver`
 
