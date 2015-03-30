@@ -6,7 +6,7 @@
 
 ## Как пользоваться?
 
-    Usage of c:\Projects\golang/bin/frf-saver:
+    Usage of frf-saver:
       -u="": username to login
       -k="": remote key (see https://friendfeed.com/account/api)
       -d="./frf-save": directory to save data
