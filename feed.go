@@ -139,6 +139,7 @@ func (s *Saver) loadUrl(u string) {
 		false {
 		s.Log.TRACE("loading %s", u)
 
+		tmpFileName := filepath.Join(os.TempDir(), "frf-saver-media-"+url.QueryEscape(uu.Host+uu.Path))
 		fileName := filepath.Join(s.OutDirName, s.FeedId, "media", filepath.FromSlash(uu.Host+uu.Path))
 
 		glb := fileName
@@ -167,16 +168,18 @@ func (s *Saver) loadUrl(u string) {
 				fileName += ".png"
 			case "image/gif":
 				fileName += ".gif"
-			case "audio/mpeg":
+			case "audio/mpeg", "audio/mp3":
 				fileName += ".mp3"
 			default:
 				s.Log.DEBUG("Unknown content type: %s", resp.Header.Get("Content-Type"))
 			}
 		}
 
-		f, _ := os.Create(fileName)
+		f, _ := os.Create(tmpFileName)
 		io.Copy(f, resp.Body)
 		f.Close()
 		resp.Body.Close()
+
+		os.Rename(tmpFileName, fileName)
 	}
 }

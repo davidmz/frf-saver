@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/davidmz/go-semaphore"
 	"github.com/davidmz/logg"
@@ -89,6 +90,12 @@ func main() {
 			toLoad = saver.Friends
 		}
 	}
+
+	go func() {
+		for range time.Tick(2 * time.Second) {
+			saver.Log.INFO("%d file(s) still downloads, please wait", conf.Sem.AcquiredCount()+conf.Sem.WaitingCount())
+		}
+	}()
 
 	saver.WG.Wait()
 
