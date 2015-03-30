@@ -2,9 +2,11 @@
 
 Очередная бэкапилка френдфида, написана для моего личного пользования.
 
+Скачать бинарники можно тут: https://github.com/davidmz/frf-saver/releases
+
 ## Как пользоваться?
 
-    Usage of c:\Projects\golang/bin/frf-saver:
+    Usage of frf-saver:
       -u="": username to login
       -k="": remote key (see https://friendfeed.com/account/api)
       -d="./frf-save": directory to save data
@@ -38,7 +40,7 @@
 
 ## Как собрать самому?
 
-Поставить (Go)[https://golang.org/doc/install] и сказать:
+Поставить [Go](https://golang.org/doc/install) и сказать:
 
 `go get github.com/davidmz/frf-saver`
 
