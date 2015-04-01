@@ -9,6 +9,9 @@ import (
 )
 
 type FInfo struct {
+	Subscribers []*struct {
+		ID string `json:"id"`
+	} `json:"subscribers"`
 	Subscriptions []*struct {
 		ID string `json:"id"`
 	} `json:"subscriptions"`
@@ -49,6 +52,10 @@ func (s *Saver) loadFeedInfo() (eerr error) {
 	s.Friends = make([]string, len(fi.Subscriptions))
 	for i, sub := range fi.Subscriptions {
 		s.Friends[i] = sub.ID
+		s.loadAvatar(sub.ID)
+	}
+	for _, sub := range fi.Subscribers {
+		s.loadAvatar(sub.ID)
 	}
 
 	return
