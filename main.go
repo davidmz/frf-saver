@@ -80,11 +80,19 @@ func main() {
 		toLoad = toLoad[1:]
 
 		os.MkdirAll(filepath.Join(saver.BaseDirName(), "entries"), os.ModePerm)
+		os.MkdirAll(filepath.Join(saver.BaseDirName(), "liked"), os.ModePerm)
+		os.MkdirAll(filepath.Join(saver.BaseDirName(), "commented"), os.ModePerm)
 		os.MkdirAll(filepath.Join(saver.BaseDirName(), "media"), os.ModePerm)
 		os.MkdirAll(filepath.Join(saver.BaseDirName(), "avatars"), os.ModePerm)
 
 		saver.loadFeedInfo()
-		saver.loadFeed()
+
+		if saver.FeedId == saver.Username {
+			saver.loadFeed("search?q=like:"+saver.FeedId, "liked")
+			saver.loadFeed("search?q=comment:"+saver.FeedId, "commented")
+		}
+
+		saver.loadFeed("feed/"+saver.FeedId, "entries")
 
 		if conf.AllFriends && saver.FeedId == conf.Username {
 			toLoad = saver.Friends

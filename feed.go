@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -38,6 +39,10 @@ type Media struct {
 	Icon string `json:"icon"`
 }
 
+type WithRawBody struct {
+	RawBody string `json:"rawBody"`
+}
+
 type FromEntry struct {
 	From struct {
 		ID string `json:"id"`
@@ -46,8 +51,8 @@ type FromEntry struct {
 
 func (e *Entry) JustID() string { return e.Id[2:] }
 
-func (s *Saver) loadFeed() (eerr error) {
-	s.Log.INFO("Reading feed")
+func (s *Saver) loadFeed(apiReq, destDir string) (eerr error) {
+	s.Log.INFO("Reading feed %v", apiReq)
 	defer func() {
 		if eerr != nil {
 			s.Log.FATAL("Can not read feed: %v", eerr)
@@ -63,7 +68,15 @@ func (s *Saver) loadFeed() (eerr error) {
 	lastId := ""
 	for {
 		s.Log.INFO("Loading from %d", start)
-		URL := ApiRoot + "feed/" + s.FeedId + "?num=100&hidden=1&raw=1&start=" + strconv.Itoa(start)
+		URL := ApiRoot + apiReq
+
+		if strings.Contains(URL, "?") {
+			URL += "&"
+		} else {
+			URL += "?"
+		}
+		URL += "num=100&hidden=1&raw=1&start=" + strconv.Itoa(start)
+
 		req, _ := http.NewRequest("GET", URL, nil)
 		req.SetBasicAuth(s.Username, s.RemoteKey)
 		resp, err := http.DefaultClient.Do(req)
@@ -79,40 +92,84 @@ func (s *Saver) loadFeed() (eerr error) {
 		}
 
 		if len(feed.Entries) == 0 || feed.Entries[0].Id == lastId {
-			s.Log.INFO("The end.")
+			s.Log.INFO("The end")
 			break
+		} else {
+			lastId = feed.Entries[0].Id
 		}
 
-		lastId = feed.Entries[0].Id
-
 		for _, e := range feed.Entries {
-			f, _ := os.Create(filepath.Join(s.OutDirName, s.FeedId, "entries", e.JustID()+".json"))
+			f, _ := os.Create(filepath.Join(s.OutDirName, s.FeedId, destDir, e.JustID()+".json"))
 			json.NewEncoder(f).Encode(e)
 			f.Close()
 
-			// media
-			for _, m := range e.Files {
-				s.loadMedia(m)
-			}
-			for _, m := range e.Thumbnails {
-				s.loadMedia(m)
-			}
-
-			// avatars
-			for _, m := range e.Comments {
-				fr := new(FromEntry)
-				json.Unmarshal(m, fr)
-				s.loadAvatar(fr.From.ID)
-			}
-			for _, m := range e.Likes {
-				fr := new(FromEntry)
-				json.Unmarshal(m, fr)
-				s.loadAvatar(fr.From.ID)
-			}
+			s.processEntry(e)
 		}
-		start += 100
+		start += len(feed.Entries)
 	}
 	return
+}
+
+func (s *Saver) processEntry(e *Entry) {
+	s.loadLinks(e.RawBody)
+
+	// media
+	for _, m := range e.Files {
+		s.loadMedia(m)
+	}
+	for _, m := range e.Thumbnails {
+		s.loadMedia(m)
+	}
+
+	// avatars
+	fr := new(FromEntry)
+	for _, m := range e.Comments {
+		json.Unmarshal(m, fr)
+		s.loadAvatar(fr.From.ID)
+	}
+
+	for _, m := range e.Likes {
+		json.Unmarshal(m, fr)
+		s.loadAvatar(fr.From.ID)
+	}
+
+	// comment's bodies
+	b := new(WithRawBody)
+	for _, m := range e.Comments {
+		json.Unmarshal(m, b)
+		s.loadLinks(b.RawBody)
+	}
+}
+
+var ffImRe = regexp.MustCompile(`http://ff.im/\w+`)
+
+func (s *Saver) loadLinks(body string) {
+	for _, u := range ffImRe.FindAllString(body, -1) {
+		s.Log.DEBUG("Found link %v", u)
+		uu, _ := url.Parse(u)
+
+		req, _ := http.NewRequest("GET", ApiRoot+"short"+uu.Path, nil)
+		req.SetBasicAuth(s.Username, s.RemoteKey)
+		resp, _ := http.DefaultClient.Do(req)
+
+		fileName := filepath.Join(s.OutDirName, s.FeedId, "links", filepath.FromSlash(uu.Host+uu.Path)+".json")
+		tmpFileName := filepath.Join(os.TempDir(), "frf-saver-link-"+url.QueryEscape(uu.Host+uu.Path))
+
+		os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
+
+		e := new(Entry)
+
+		f, _ := os.Create(tmpFileName)
+
+		tr := io.TeeReader(resp.Body, f)
+		json.NewDecoder(tr).Decode(e)
+
+		f.Close()
+		resp.Body.Close()
+		os.Rename(tmpFileName, fileName)
+
+		s.processEntry(e)
+	}
 }
 
 func (s *Saver) loadMedia(rm json.RawMessage) {
