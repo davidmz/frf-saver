@@ -38,7 +38,7 @@ func (s *Saver) loadFeedInfo() (eerr error) {
 
 	req, _ := http.NewRequest("GET", ApiRoot+"feedinfo/"+s.FeedId+"?pretty=1", nil)
 	req.SetBasicAuth(s.Username, s.RemoteKey)
-	resp, eerr := http.DefaultClient.Do(req)
+	resp, eerr := s.DoReq(req)
 	if eerr != nil {
 		return
 	}

@@ -79,7 +79,7 @@ func (s *Saver) loadFeed(apiReq, destDir string) (eerr error) {
 
 		req, _ := http.NewRequest("GET", URL, nil)
 		req.SetBasicAuth(s.Username, s.RemoteKey)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := s.DoReq(req)
 		if err != nil {
 			return err
 		}
@@ -150,7 +150,11 @@ func (s *Saver) loadLinks(body string) {
 
 		req, _ := http.NewRequest("GET", ApiRoot+"short"+uu.Path, nil)
 		req.SetBasicAuth(s.Username, s.RemoteKey)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, err := s.DoReq(req)
+		if err != nil {
+			s.Log.ERROR("Can not load link %q: %v", u, err)
+			continue
+		}
 
 		fileName := filepath.Join(s.OutDirName, s.FeedId, "links", filepath.FromSlash(uu.Host+uu.Path)+".json")
 		tmpFileName := filepath.Join(os.TempDir(), "frf-saver-link-"+url.QueryEscape(uu.Host+uu.Path))
@@ -211,7 +215,7 @@ func (s *Saver) loadUrl(u string) {
 
 		os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
 
-		resp, err := http.Get(u)
+		resp, err := s.GetReq(u)
 		if err != nil {
 			s.Log.ERROR("error loading %s: %v", u, err)
 			return

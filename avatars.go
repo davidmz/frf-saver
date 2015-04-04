@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -31,7 +30,7 @@ func (s *Saver) loadAvatar(login string) {
 
 func (s *Saver) loadAvatarData(login string) {
 	u := ApiRoot + "picture/" + login + "?size=large"
-	resp, err := http.Get(u)
+	resp, err := s.GetReq(u)
 	if err != nil {
 		s.Log.ERROR("error loading %s: %v", u, err)
 		return
