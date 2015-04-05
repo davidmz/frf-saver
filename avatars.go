@@ -44,5 +44,5 @@ func (s *Saver) loadAvatarData(login string) {
 	f.Close()
 	resp.Body.Close()
 
-	os.Rename(tmpFileName, fileName)
+	osRename(tmpFileName, fileName)
 }
