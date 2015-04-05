@@ -26,6 +26,7 @@ type Conf struct {
 	WG         *sync.WaitGroup
 	Sem        *semaphore.Semaphore
 	NRetries   int
+	JustMedia  bool
 }
 
 type Saver struct {
@@ -53,6 +54,7 @@ func main() {
 	flag.StringVar(&logLevel, "ll", "info", "log level")
 	flag.IntVar(&conf.NRetries, "r", 5, "number of network retries")
 	flag.IntVar(&nWorkers, "w", 1, "number of parallel workers for '-a' (experimental!)")
+	flag.BoolVar(&conf.JustMedia, "m", false, "just check and load missing media files for loaded entries")
 	flag.Parse()
 
 	if conf.Username == "" || conf.RemoteKey == "" {
@@ -124,6 +126,11 @@ func main() {
 
 func (saver *Saver) process() {
 	saver.Log = saver.Conf.Log.ChildWithPrefix(saver.FeedId)
+
+	if saver.JustMedia {
+		saver.processMedia()
+		return
+	}
 
 	os.MkdirAll(filepath.Join(saver.BaseDirName(), "entries"), os.ModePerm)
 	os.MkdirAll(filepath.Join(saver.BaseDirName(), "liked"), os.ModePerm)

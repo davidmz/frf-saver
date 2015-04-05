@@ -179,12 +179,12 @@ func (s *Saver) loadLinks(body string) {
 func (s *Saver) loadMedia(rm json.RawMessage) {
 	m := new(Media)
 	json.Unmarshal(rm, m)
-	s.Async(func() { s.loadUrl(m.Link) })
-	s.Async(func() { s.loadUrl(m.Url) })
-	s.Async(func() { s.loadUrl(m.Icon) })
+	s.loadIfNeed(m.Link)
+	s.loadIfNeed(m.Url)
+	s.loadIfNeed(m.Icon)
 }
 
-func (s *Saver) loadUrl(u string) {
+func (s *Saver) loadIfNeed(u string) {
 	if u == "" {
 		return
 	}
@@ -193,54 +193,58 @@ func (s *Saver) loadUrl(u string) {
 		return
 	}
 
-	if uu.Host == "m.friendfeed-media.com" ||
-		uu.Host == "i.friendfeed.com" ||
-		uu.Host == "friendfeed.com" && strings.HasPrefix(uu.Path, "/static/") ||
-		// uu.Host == "friendfeed-media.s3.amazonaws.com" || // always same as "m.friendfeed-media.com"
-		false {
-		s.Log.TRACE("loading %s", u)
+	// uu.Host == "friendfeed-media.s3.amazonaws.com" || // always same as "m.friendfeed-media.com"
+	if uu.Host != "m.friendfeed-media.com" &&
+		uu.Host != "i.friendfeed.com" &&
+		!(uu.Host == "friendfeed.com" && strings.HasPrefix(uu.Path, "/static/")) {
+		return
+	}
 
-		tmpFileName := filepath.Join(os.TempDir(), "frf-saver-media-"+url.QueryEscape(uu.Host+uu.Path))
-		fileName := filepath.Join(s.OutDirName, s.FeedId, "media", filepath.FromSlash(uu.Host+uu.Path))
+	s.Log.TRACE("checking %s", u)
 
-		glb := fileName
-		if filepath.Ext(fileName) == "" {
-			glb += ".*"
-		}
+	fileName := filepath.Join(s.OutDirName, s.FeedId, "media", filepath.FromSlash(uu.Host+uu.Path))
 
-		if fs, _ := filepath.Glob(glb); len(fs) > 0 {
+	for _, ext := range MIMETypes {
+		if _, err := os.Stat(fileName + ext); err == nil {
 			s.Log.TRACE("already loaded %s", u)
 			return
 		}
-
-		os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
-
-		resp, err := s.GetReq(u)
-		if err != nil {
-			s.Log.ERROR("error loading %s: %v", u, err)
-			return
-		}
-
-		if filepath.Ext(fileName) == "" {
-			switch resp.Header.Get("Content-Type") {
-			case "image/jpeg":
-				fileName += ".jpg"
-			case "image/png":
-				fileName += ".png"
-			case "image/gif":
-				fileName += ".gif"
-			case "audio/mpeg", "audio/mp3":
-				fileName += ".mp3"
-			default:
-				s.Log.DEBUG("Unknown content type: %s", resp.Header.Get("Content-Type"))
-			}
-		}
-
-		f, _ := os.Create(tmpFileName)
-		io.Copy(f, resp.Body)
-		f.Close()
-		resp.Body.Close()
-
-		os.Rename(tmpFileName, fileName)
 	}
+
+	s.Async(func() { s.loadUrl(uu) })
+}
+
+var MIMETypes = map[string]string{
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/gif":  ".gif",
+	"audio/mpeg": ".mp3",
+	"audio/mp3":  ".mp3",
+	"???":        "",
+}
+
+func (s *Saver) loadUrl(uu *url.URL) {
+	s.Log.DEBUG("loading %s", uu.String())
+
+	tmpFileName := filepath.Join(os.TempDir(), "frf-saver-media-"+url.QueryEscape(uu.Host+uu.Path))
+	fileName := filepath.Join(s.OutDirName, s.FeedId, "media", filepath.FromSlash(uu.Host+uu.Path))
+
+	os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
+
+	resp, err := s.GetReq(uu.String())
+	if err != nil {
+		s.Log.ERROR("error loading %s: %v", uu.String(), err)
+		return
+	}
+
+	if filepath.Ext(fileName) == "" {
+		fileName += MIMETypes[resp.Header.Get("Content-Type")]
+	}
+
+	f, _ := os.Create(tmpFileName)
+	io.Copy(f, resp.Body)
+	f.Close()
+	resp.Body.Close()
+
+	os.Rename(tmpFileName, fileName)
 }
