@@ -248,11 +248,13 @@ func (s *Saver) loadUrl(uu *url.URL) {
 
 	if err := osRename(tmpFileName, fileName); err != nil {
 		s.Log.ERROR("Can not move file '%s' to '%s': %v", tmpFileName, fileName, err)
+		return
 	}
+	s.Log.TRACE("File loaded: '%s'", fileName)
 }
 
 func osRename(srcName, dstName string) error {
-	if err := osRename(srcName, dstName); err == nil {
+	if err := os.Rename(srcName, dstName); err == nil {
 		return nil
 	}
 	srcF, err := os.Open(srcName)
@@ -261,7 +263,7 @@ func osRename(srcName, dstName string) error {
 	}
 	defer srcF.Close()
 
-	dstF, err := os.Create(srcName)
+	dstF, err := os.Create(dstName)
 	if err != nil {
 		return err
 	}
