@@ -29,6 +29,18 @@ func (s *Saver) processMedia() {
 			for _, m := range e.Thumbnails {
 				s.loadMedia(m)
 			}
+
+			s.loadLinks(e.RawBody)
+
+			// comment's bodies
+			b := new(WithRawBody)
+			fr := new(FromEntry)
+			for _, m := range e.Comments {
+				json.Unmarshal(m, b)
+				json.Unmarshal(m, fr)
+				s.loadLinks(b.RawBody)
+				s.loadAvatar(fr.From.ID)
+			}
 		}
 	}
 }
