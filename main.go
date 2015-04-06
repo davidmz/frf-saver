@@ -136,6 +136,12 @@ func main() {
 func (saver *Saver) process() {
 	saver.Log = saver.Conf.Log.ChildWithPrefix(saver.FeedId)
 
+	os.MkdirAll(filepath.Join(saver.BaseDirName(), "entries"), os.ModePerm)
+	os.MkdirAll(filepath.Join(saver.BaseDirName(), "liked"), os.ModePerm)
+	os.MkdirAll(filepath.Join(saver.BaseDirName(), "commented"), os.ModePerm)
+	os.MkdirAll(filepath.Join(saver.BaseDirName(), "media"), os.ModePerm)
+	os.MkdirAll(filepath.Join(saver.BaseDirName(), "avatars"), os.ModePerm)
+
 	if saver.SaveLikes {
 		saver.saveLikes()
 		return
@@ -145,12 +151,6 @@ func (saver *Saver) process() {
 		saver.processMedia()
 		return
 	}
-
-	os.MkdirAll(filepath.Join(saver.BaseDirName(), "entries"), os.ModePerm)
-	os.MkdirAll(filepath.Join(saver.BaseDirName(), "liked"), os.ModePerm)
-	os.MkdirAll(filepath.Join(saver.BaseDirName(), "commented"), os.ModePerm)
-	os.MkdirAll(filepath.Join(saver.BaseDirName(), "media"), os.ModePerm)
-	os.MkdirAll(filepath.Join(saver.BaseDirName(), "avatars"), os.ModePerm)
 
 	saver.Log.Prefix = saver.FeedId + ":info"
 	saver.loadFeedInfo()

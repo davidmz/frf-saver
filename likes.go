@@ -79,8 +79,15 @@ func (s *Saver) saveLikes() {
 		sem := semaphore.New(3)
 
 		for _, e := range feed.Entries {
-			f, _ := os.Create(filepath.Join(s.OutDirName, s.FeedId, destDir, e.JustID()+".json"))
-			json.NewEncoder(f).Encode(e)
+			f, err := os.Create(filepath.Join(s.OutDirName, s.FeedId, destDir, e.JustID()+".json"))
+			if err != nil {
+				s.Log.ERROR("Can not write entry: %v", err)
+				return
+			}
+			if err := json.NewEncoder(f).Encode(e); err != nil {
+				s.Log.ERROR("Can not encode entry: %v", err)
+				return
+			}
 			f.Close()
 			// разлайкиваем
 			wg.Add(1)
