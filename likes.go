@@ -52,12 +52,16 @@ func (s *Saver) saveLikes() {
 		req.SetBasicAuth(s.Username, s.RemoteKey)
 		resp, err := s.DoReq(req)
 		if err != nil {
-			s.Log.ERROR("Can not read feed: %v", err)
+			s.Log.FATAL("Can not load feed: %v", err)
 			return
 		}
 
 		feed := new(Feed)
-		json.NewDecoder(resp.Body).Decode(feed)
+		if err := json.NewDecoder(resp.Body).Decode(feed); err != nil {
+			s.Log.FATAL("Can not parse XML: %v", err)
+			resp.Body.Close()
+			return
+		}
 		resp.Body.Close()
 
 		if len(feed.Entries) == 0 {

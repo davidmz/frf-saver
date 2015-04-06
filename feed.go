@@ -248,7 +248,7 @@ func (s *Saver) loadUrl(uu *url.URL) {
 	resp.Body.Close()
 
 	if err := os.Rename(tmpFileName, fileName); err != nil {
-		s.Log.ERROR("Can not move file '%s' to '%s': %v", tmpFileName, fileName, err)
+		s.Log.DEBUG("Can not move file '%s' to '%s': %v", tmpFileName, fileName, err)
 		return
 	}
 	s.Log.DEBUG("File loaded: '%s'", strings.TrimPrefix(fileName, s.BaseDirName()))
