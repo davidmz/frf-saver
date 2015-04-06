@@ -170,7 +170,7 @@ func (s *Saver) loadLinks(body string) {
 
 		f.Close()
 		resp.Body.Close()
-		osRename(tmpFileName, fileName)
+		s.osRename(tmpFileName, fileName)
 
 		s.processEntry(e)
 	}
@@ -246,17 +246,20 @@ func (s *Saver) loadUrl(uu *url.URL) {
 	f.Close()
 	resp.Body.Close()
 
-	if err := osRename(tmpFileName, fileName); err != nil {
+	if err := s.osRename(tmpFileName, fileName); err != nil {
 		s.Log.ERROR("Can not move file '%s' to '%s': %v", tmpFileName, fileName, err)
 		return
 	}
-	s.Log.TRACE("File loaded: '%s'", fileName)
+	s.Log.DEBUG("File loaded: '%s'", strings.TrimPrefix(fileName, s.BaseDirName()))
 }
 
-func osRename(srcName, dstName string) error {
+func (s *Saver) osRename(srcName, dstName string) error {
 	if err := os.Rename(srcName, dstName); err == nil {
 		return nil
+	} else {
+		s.Log.DEBUG("Can not rename %s, trying to copy; error: %v", srcName, err)
 	}
+
 	srcF, err := os.Open(srcName)
 	if err != nil {
 		return err
@@ -271,6 +274,7 @@ func osRename(srcName, dstName string) error {
 
 	_, err = io.Copy(dstF, srcF)
 	if err == nil {
+		srcF.Close()
 		err = os.Remove(srcName)
 	}
 	return err
