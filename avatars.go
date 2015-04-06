@@ -36,13 +36,13 @@ func (s *Saver) loadAvatarData(login string) {
 		return
 	}
 
-	tmpFileName := filepath.Join(os.TempDir(), "frf-saver-avatar-"+login+".jpg")
 	fileName := filepath.Join(s.BaseDirName(), "avatars", login+".jpg")
+	tmpFileName := fileName + ".tmp"
 
 	f, _ := os.Create(tmpFileName)
 	io.Copy(f, resp.Body)
 	f.Close()
 	resp.Body.Close()
 
-	s.osRename(tmpFileName, fileName)
+	os.Rename(tmpFileName, fileName)
 }

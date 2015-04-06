@@ -59,7 +59,7 @@ func (s *Saver) loadFeed(apiReq, destDir string) (eerr error) {
 		}
 	}()
 
-	eerr = os.MkdirAll(filepath.Join(s.OutDirName, s.FeedId, "entries"), os.ModePerm)
+	eerr = os.MkdirAll(filepath.Join(s.OutDirName, s.FeedId, destDir), os.ModePerm)
 	if eerr != nil {
 		return
 	}
@@ -90,6 +90,7 @@ func (s *Saver) loadFeed(apiReq, destDir string) (eerr error) {
 		if eerr != nil {
 			return
 		}
+		resp.Body.Close()
 
 		if len(feed.Entries) == 0 || feed.Entries[0].Id == lastId {
 			s.Log.INFO("The end")
@@ -157,7 +158,7 @@ func (s *Saver) loadLinks(body string) {
 		}
 
 		fileName := filepath.Join(s.OutDirName, s.FeedId, "links", filepath.FromSlash(uu.Host+uu.Path)+".json")
-		tmpFileName := filepath.Join(os.TempDir(), "frf-saver-link-"+url.QueryEscape(uu.Host+uu.Path))
+		tmpFileName := fileName + ".tmp"
 
 		os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
 
@@ -170,7 +171,7 @@ func (s *Saver) loadLinks(body string) {
 
 		f.Close()
 		resp.Body.Close()
-		s.osRename(tmpFileName, fileName)
+		os.Rename(tmpFileName, fileName)
 
 		s.processEntry(e)
 	}
@@ -226,8 +227,8 @@ var MIMETypes = map[string]string{
 func (s *Saver) loadUrl(uu *url.URL) {
 	s.Log.DEBUG("loading %s", uu.String())
 
-	tmpFileName := filepath.Join(os.TempDir(), "frf-saver-media-"+url.QueryEscape(uu.Host+uu.Path))
 	fileName := filepath.Join(s.OutDirName, s.FeedId, "media", filepath.FromSlash(uu.Host+uu.Path))
+	tmpFileName := fileName + ".tmp"
 
 	os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
 
@@ -246,7 +247,7 @@ func (s *Saver) loadUrl(uu *url.URL) {
 	f.Close()
 	resp.Body.Close()
 
-	if err := s.osRename(tmpFileName, fileName); err != nil {
+	if err := os.Rename(tmpFileName, fileName); err != nil {
 		s.Log.ERROR("Can not move file '%s' to '%s': %v", tmpFileName, fileName, err)
 		return
 	}

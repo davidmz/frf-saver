@@ -27,6 +27,8 @@ type Conf struct {
 	Sem        *semaphore.Semaphore
 	NRetries   int
 	JustMedia  bool
+	SaveLikes  bool
+	AuthCookie string
 }
 
 type Saver struct {
@@ -53,13 +55,20 @@ func main() {
 	flag.StringVar(&conf.OutDirName, "d", "./frf-save", "directory to save data")
 	flag.StringVar(&logLevel, "ll", "info", "log level")
 	flag.IntVar(&conf.NRetries, "r", 5, "number of network retries")
-	flag.IntVar(&nWorkers, "w", 1, "number of parallel workers for '-a' (experimental!)")
+	flag.IntVar(&nWorkers, "w", 1, "number of parallel workers for '-a'")
 	flag.BoolVar(&conf.JustMedia, "m", false, "just check and load missing media files for loaded entries")
+	flag.BoolVar(&conf.SaveLikes, "save-likes", false, "save all likes in depth (DESTRUCTIVE, only owner's likes)")
+	flag.StringVar(&conf.AuthCookie, "coo", "", "value of frf cookie 'U' (for -save-likes)")
 	flag.Parse()
 
 	if conf.Username == "" || conf.RemoteKey == "" {
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	if conf.SaveLikes {
+		feedId = ""
+		conf.AllFriends = false
 	}
 
 	if feedId == "" {
@@ -126,6 +135,11 @@ func main() {
 
 func (saver *Saver) process() {
 	saver.Log = saver.Conf.Log.ChildWithPrefix(saver.FeedId)
+
+	if saver.SaveLikes {
+		saver.saveLikes()
+		return
+	}
 
 	if saver.JustMedia {
 		saver.processMedia()
